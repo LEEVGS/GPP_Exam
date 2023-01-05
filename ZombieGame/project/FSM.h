@@ -1,0 +1,53 @@
+#include "Blackboard.h"
+#include <map>
+
+class FSMState
+{
+public:
+	FSMState() {}
+	virtual ~FSMState() = default;
+
+	virtual void OnEnter(Blackboard* pBlackboard) {};
+	virtual void OnExit(Blackboard* pBlackboard) {};
+	virtual void Update(Blackboard* pBlackboard, float deltaTime) {};
+
+};
+
+class FSMCondition
+{
+public:
+	FSMCondition() = default;
+	virtual ~FSMCondition() = default;
+	virtual bool Evaluate(Blackboard* pBlackboard) const = 0;
+};
+
+class IDecisionMaking
+{
+public:
+	IDecisionMaking() = default;
+	virtual ~IDecisionMaking() = default;
+
+	virtual void Update(float deltaT) = 0;
+
+};
+
+class FiniteStateMachine final : public IDecisionMaking
+{
+public:
+	FiniteStateMachine(FSMState* startState, Blackboard* pBlackboard);
+	virtual ~FiniteStateMachine() = default;
+
+	void AddTransition(FSMState* startState, FSMState* toState, FSMCondition* transition);
+	virtual void Update(float deltaTime) override;
+	Blackboard* GetBlackboard() const;
+
+private:
+	void ChangeState(FSMState* newState);
+private:
+	typedef std::pair<FSMCondition*, FSMState*> TransitionStatePair;
+	typedef std::vector<TransitionStatePair> Transitions;
+
+	std::map<FSMState*, Transitions> m_Transitions; //Key is the state, value are all the transitions for that current state 
+	FSMState* m_pCurrentState;
+	Blackboard* m_pBlackboard = nullptr; // takes ownership of the blackboard
+};

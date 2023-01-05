@@ -182,11 +182,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Blackboard.h" />
+    <ClInclude Include="FSM.h" />
     <ClInclude Include="Plugin.h" />
+    <ClInclude Include="StatesAndTransitions.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FSM.cpp" />
     <ClCompile Include="Plugin.cpp" />
+    <ClCompile Include="StatesAndTransitions.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>

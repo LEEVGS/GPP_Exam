@@ -3,9 +3,14 @@
   <ItemGroup>
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="StatesAndTransitions.cpp" />
+    <ClCompile Include="FSM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="StatesAndTransitions.h" />
+    <ClInclude Include="FSM.h" />
+    <ClInclude Include="Blackboard.h" />
   </ItemGroup>
 </Project>

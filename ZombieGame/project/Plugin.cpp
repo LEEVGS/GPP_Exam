@@ -2,6 +2,8 @@
 #include "Plugin.h"
 #include "IExamInterface.h"
 
+#include <iostream>
+
 using namespace std;
 
 //Called only once, during initialization
@@ -14,21 +16,51 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	//Bit information about the plugin
 	//Please fill this in!!
 	info.BotName = "MinionExam";
-	info.Student_FirstName = "Foo";
-	info.Student_LastName = "Bar";
-	info.Student_Class = "2DAEx";
+	info.Student_FirstName = "Lee";
+	info.Student_LastName = "Vangraefschepe";
+	info.Student_Class = "2DAE15N";
 }
 
 //Called only once
 void Plugin::DllInit()
 {
 	//Called when the plugin is loaded
+	std::cout << "Loaded dll\n";
+	
+	//Create states
+	states::Wanderstate* pWanderstate = new states::Wanderstate{};
+	m_States.push_back(pWanderstate);
+	states::HouseSeek* pHouseSeek = new states::HouseSeek{};
+	m_States.push_back(pHouseSeek);
+	
+	//Create conditions
+	conditions::DefaultWanderingCondition* pWander = new conditions::DefaultWanderingCondition{};
+	m_Conditions.push_back(pWander);
+	conditions::NewHouseNearby* pHouseNearby = new conditions::NewHouseNearby{};
+	m_Conditions.push_back(pHouseNearby);
+	
+	m_pBlackboard = CreateBlackboard();
+	
+	m_pDecisionMaking = new FiniteStateMachine{pWanderstate, m_pBlackboard};
+	m_pDecisionMaking->AddTransition(pWanderstate, pHouseSeek, pHouseNearby);
+	m_pDecisionMaking->AddTransition(pHouseSeek, pWanderstate, pWander);
 }
 
 //Called only once
 void Plugin::DllShutdown()
 {
 	//Called wheb the plugin gets unloaded
+	for (auto element : m_Conditions)
+	{
+		delete element;
+	}
+	for (auto element : m_States)
+	{
+		delete element;
+	}
+	delete m_pBlackboard;
+	delete m_pDecisionMaking;
+	
 }
 
 //Called only once, during initialization
@@ -121,17 +153,52 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	auto steering = SteeringPlugin_Output();
 	
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
-	auto agentInfo = m_pInterface->Agent_GetInfo();
+	m_AgentInfo = m_pInterface->Agent_GetInfo();
 
 
 	//Use the navmesh to calculate the next navmesh point
 	//auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(checkpointLocation);
 
 	//OR, Use the mouse target
+
+	m_pDecisionMaking->Update(dt);
+
+	//std::cout << "Target: (" << m_Target.x << "," << m_Target.y << ")\n";
+
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target); //Uncomment this to use mouse position as guidance
 
 	auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
 	auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
+
+	for (auto housesInFov: vHousesInFOV)
+	{
+		bool alreadyVisited{ false };
+		bool alreadyAdded{ false };
+		for (auto visitedHouse : m_VisitedHouses)
+		{
+			if (visitedHouse.Center == housesInFov.Center)
+			{
+				alreadyVisited = true;
+				break;
+			}
+		}
+		if (alreadyVisited == false)
+		{
+			for (auto newHouse : m_NewHouses)
+			{
+				if (newHouse.Center == housesInFov.Center)
+				{
+					alreadyAdded = true;
+					break;
+				}
+			}
+			if (alreadyAdded == false)
+			{
+				m_NewHouses.push_back(housesInFov);
+			}
+		}
+	}
+	std::cout << "Houses: " << m_NewHouses.size() << " Visited houses: " << m_VisitedHouses.size() << "\n";
 
 	for (auto& e : vEntitiesInFOV)
 	{
@@ -174,11 +241,11 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	}
 
 	//Simple Seek Behaviour (towards Target)
-	steering.LinearVelocity = nextTargetPos - agentInfo.Position; //Desired Velocity
+	steering.LinearVelocity = nextTargetPos - m_AgentInfo.Position; //Desired Velocity
 	steering.LinearVelocity.Normalize(); //Normalize Desired Velocity
-	steering.LinearVelocity *= agentInfo.MaxLinearSpeed; //Rescale to Max Speed
+	steering.LinearVelocity *= m_AgentInfo.MaxLinearSpeed; //Rescale to Max Speed
 
-	if (Distance(nextTargetPos, agentInfo.Position) < 2.f)
+	if (Distance(nextTargetPos, m_AgentInfo.Position) < 2.f)
 	{
 		steering.LinearVelocity = Elite::ZeroVector2;
 	}
@@ -241,4 +308,14 @@ vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 	}
 
 	return vEntitiesInFOV;
+}
+
+Blackboard* Plugin::CreateBlackboard()
+{
+	Blackboard* pBlackboard = new Blackboard();
+	pBlackboard->AddData("Agent", &m_AgentInfo);
+	pBlackboard->AddData("Target", &m_Target);
+	pBlackboard->AddData("VisitedHouses", &m_VisitedHouses);
+	pBlackboard->AddData("NewHouses", &m_NewHouses);
+	return pBlackboard;
 }

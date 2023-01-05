@@ -2,6 +2,9 @@
 #include "IExamPlugin.h"
 #include "Exam_HelperStructs.h"
 
+#include "StatesAndTransitions.h"
+#include <vector>
+
 class IBaseInterface;
 class IExamInterface;
 
@@ -35,6 +38,16 @@ private:
 	float m_AngSpeed = 0.f; //Demo purpose
 
 	UINT m_InventorySlot = 0;
+
+	Blackboard* CreateBlackboard();
+	Blackboard* m_pBlackboard {nullptr};
+	FiniteStateMachine* m_pDecisionMaking{ nullptr };
+
+	AgentInfo m_AgentInfo;
+	std::vector<HouseInfo> m_VisitedHouses;
+	std::vector<HouseInfo> m_NewHouses;
+	std::vector<FSMCondition*> m_Conditions;
+	std::vector<FSMState*> m_States;
 };
 
 //ENTRY
