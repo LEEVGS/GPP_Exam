@@ -19,6 +19,37 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	info.Student_FirstName = "Lee";
 	info.Student_LastName = "Vangraefschepe";
 	info.Student_Class = "2DAE15N";
+
+	//Create grid structure
+	
+	m_WorldInfo = m_pInterface->World_GetInfo();
+	m_AmountCellsWidth = ceil(m_WorldInfo.Dimensions.x / m_CellSize);
+	m_AmountCellsHeight = ceil(m_WorldInfo.Dimensions.y / m_CellSize);
+	int amountOffCells = m_AmountCellsWidth * m_AmountCellsHeight;
+	m_pArrTiles = new TileInfo[amountOffCells];
+	m_TilesSize = amountOffCells;
+
+	TileInfo::cellSize = m_CellSize;
+	TileInfo::amountCellsWidth = m_AmountCellsWidth;
+	TileInfo::correction = m_WorldInfo.Dimensions.x / 2;
+
+	for (int i = 0; i < amountOffCells; ++i)
+	{
+		m_pArrTiles[i].id = i;
+		m_pArrTiles[i].pos.y = (i / m_AmountCellsWidth);
+		m_pArrTiles[i].pos.x = (i * m_CellSize) - (m_pArrTiles[i].pos.y * m_AmountCellsWidth * m_CellSize);
+		m_pArrTiles[i].pos.y *= 5.f;
+		m_pArrTiles[i].pos.x -= m_WorldInfo.Dimensions.x / 2;
+		m_pArrTiles[i].pos.y -= m_WorldInfo.Dimensions.y / 2;
+	}
+
+	//for (int i = 0; i < amountOffCells; ++i)
+	//{
+	//	std::cout << m_pArrTiles[i].pos.x << "," << m_pArrTiles[i].pos.y << "\n";
+	//}
+
+	std::cout << m_WorldInfo.Dimensions.x << "," << m_WorldInfo.Dimensions.y << "\n";
+	std::cout << amountOffCells << "\n";
 }
 
 //Called only once
@@ -26,24 +57,7 @@ void Plugin::DllInit()
 {
 	//Called when the plugin is loaded
 	std::cout << "Loaded dll\n";
-	
-	//Create states
-	states::Wanderstate* pWanderstate = new states::Wanderstate{};
-	m_States.push_back(pWanderstate);
-	states::HouseSeek* pHouseSeek = new states::HouseSeek{};
-	m_States.push_back(pHouseSeek);
-	
-	//Create conditions
-	conditions::DefaultWanderingCondition* pWander = new conditions::DefaultWanderingCondition{};
-	m_Conditions.push_back(pWander);
-	conditions::NewHouseNearby* pHouseNearby = new conditions::NewHouseNearby{};
-	m_Conditions.push_back(pHouseNearby);
-	
-	m_pBlackboard = CreateBlackboard();
-	
-	m_pDecisionMaking = new FiniteStateMachine{pWanderstate, m_pBlackboard};
-	m_pDecisionMaking->AddTransition(pWanderstate, pHouseSeek, pHouseNearby);
-	m_pDecisionMaking->AddTransition(pHouseSeek, pWanderstate, pWander);
+	CreateFSM();
 }
 
 //Called only once
@@ -60,7 +74,7 @@ void Plugin::DllShutdown()
 	}
 	delete m_pBlackboard;
 	delete m_pDecisionMaking;
-	
+	delete m_pArrTiles;
 }
 
 //Called only once, during initialization
@@ -194,11 +208,36 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 			}
 			if (alreadyAdded == false)
 			{
+				//Add house to list and tiles
 				m_NewHouses.push_back(housesInFov);
+				const int minX = housesInFov.Center.x - housesInFov.Size.x / 2 + m_CellSize;
+				const int maxX = housesInFov.Center.x + housesInFov.Size.x / 2 - m_CellSize;
+				const int minY = housesInFov.Center.y - housesInFov.Size.y / 2 + m_CellSize;
+				const int maxY = housesInFov.Center.y + housesInFov.Size.y / 2 - m_CellSize;
+
+				for (int y = minY; y < maxY; ++y)
+				{
+					for (int x = minX; x < maxX; ++x)
+					{
+						//int tileId = TileInfo::GetTileId(Elite::Vector2{ (float)x,(float)y }, m_WorldInfo.Dimensions.x/2.f, m_CellSize, m_AmountCellsWidth);
+						//m_pArrTiles[tileId].type = TileInfo::House;
+					}
+				}
 			}
 		}
 	}
-	std::cout << "Houses: " << m_NewHouses.size() << " Visited houses: " << m_VisitedHouses.size() << "\n";
+
+	if (m_pInterface->Input_IsKeyboardKeyDown(Elite::InputScancode::eScancode_PageDown))
+	{
+		m_ShowDebug = !m_ShowDebug;
+		std::cout << "Show debug toggled!";
+	}
+	if (m_ShowDebug)
+	{
+		std::cout << "Houses: " << m_NewHouses.size() << " Visited houses: " << m_VisitedHouses.size() << "\n";
+	}
+
+	//std::cout << "Houses: " << m_NewHouses.size() << " Visited houses: " << m_VisitedHouses.size() << "\n";
 
 	for (auto& e : vEntitiesInFOV)
 	{
@@ -268,8 +307,39 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 //This function should only be used for rendering debug elements
 void Plugin::Render(float dt) const
 {
+	if (!m_ShowDebug)
+	{
+		return;
+	}
 	//This Render function should only contain calls to Interface->Draw_... functions
 	m_pInterface->Draw_SolidCircle(m_Target, .7f, { 0,0 }, { 1, 0, 0 });
+
+	Elite::Vector2 p0{}, p1{}, p2{}, p3{};
+
+	for (int i = 0; i < m_TilesSize; ++i)
+	{
+		p0 = m_pArrTiles[i].pos;
+		if (p0.DistanceSquared(m_AgentInfo.Position) > 1000.f)
+		{
+			continue;
+		}
+
+		Elite::Vector3 color{ 1.f,1.f,1.f };
+
+		p1 = p0 + Elite::Vector2{m_CellSize, 0.f};
+		p2 = p0 + Elite::Vector2{m_CellSize, m_CellSize};
+		p3 = p0 + Elite::Vector2{0.f, m_CellSize};
+	
+		if (m_pArrTiles[i].type == TileInfo::House)
+		{
+			color = { 1.f,0.f,0.f };
+		}
+	
+		m_pInterface->Draw_Segment(p0, p1, color);
+		m_pInterface->Draw_Segment(p1, p2, color);
+		m_pInterface->Draw_Segment(p2, p3, color);
+		m_pInterface->Draw_Segment(p3, p0, color);
+	}
 }
 
 vector<HouseInfo> Plugin::GetHousesInFOV() const
@@ -310,6 +380,27 @@ vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 	return vEntitiesInFOV;
 }
 
+void Plugin::CreateFSM()
+{
+	//Create states
+	states::Wanderstate* pWanderstate = new states::Wanderstate{};
+	m_States.push_back(pWanderstate);
+	states::HouseSeek* pHouseSeek = new states::HouseSeek{};
+	m_States.push_back(pHouseSeek);
+
+	//Create conditions
+	conditions::DefaultWanderingCondition* pWander = new conditions::DefaultWanderingCondition{};
+	m_Conditions.push_back(pWander);
+	conditions::NewHouseNearby* pHouseNearby = new conditions::NewHouseNearby{};
+	m_Conditions.push_back(pHouseNearby);
+
+	m_pBlackboard = CreateBlackboard();
+
+	m_pDecisionMaking = new FiniteStateMachine{ pWanderstate, m_pBlackboard };
+	m_pDecisionMaking->AddTransition(pWanderstate, pHouseSeek, pHouseNearby);
+	m_pDecisionMaking->AddTransition(pHouseSeek, pWanderstate, pWander);
+}
+
 Blackboard* Plugin::CreateBlackboard()
 {
 	Blackboard* pBlackboard = new Blackboard();
@@ -317,5 +408,7 @@ Blackboard* Plugin::CreateBlackboard()
 	pBlackboard->AddData("Target", &m_Target);
 	pBlackboard->AddData("VisitedHouses", &m_VisitedHouses);
 	pBlackboard->AddData("NewHouses", &m_NewHouses);
+	pBlackboard->AddData("Tiles", m_pArrTiles);
+	pBlackboard->AddData("WorldInfo", &m_WorldInfo);
 	return pBlackboard;
 }

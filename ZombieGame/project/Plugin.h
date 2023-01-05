@@ -27,10 +27,12 @@ public:
 private:
 	//Interface, used to request data from/perform actions with the AI Framework
 	IExamInterface* m_pInterface = nullptr;
+	WorldInfo m_WorldInfo;
 	std::vector<HouseInfo> GetHousesInFOV() const;
 	std::vector<EntityInfo> GetEntitiesInFOV() const;
 
 	Elite::Vector2 m_Target = {};
+	bool m_ShowDebug = true;
 	bool m_CanRun = false; //Demo purpose
 	bool m_GrabItem = false; //Demo purpose
 	bool m_UseItem = false; //Demo purpose
@@ -39,6 +41,13 @@ private:
 
 	UINT m_InventorySlot = 0;
 
+	int m_TilesSize{};
+	int m_AmountCellsWidth{};
+	int m_AmountCellsHeight{};
+	const float m_CellSize = 5.f;
+	TileInfo* m_pArrTiles{nullptr};
+
+	void CreateFSM();
 	Blackboard* CreateBlackboard();
 	Blackboard* m_pBlackboard {nullptr};
 	FiniteStateMachine* m_pDecisionMaking{ nullptr };

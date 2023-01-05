@@ -15,8 +15,10 @@ void states::HouseSeek::OnEnter(Blackboard* pBlackboard)
 	Elite::Vector2 center = ptr->Center;
 	Elite::Vector2 size = ptr->Size;
 	size -= {10.f, 10.f};
-	m_cornors.push_back({ center.x - size.x / 2,center.y - size.y / 2 });
-	m_cornors.push_back({ center.x + size.x / 2,center.y + size.y / 2 });
+	m_cornors.emplace_back(center.x - size.x / 2,center.y - size.y / 2);
+	m_cornors.emplace_back(center.x + size.x / 2,center.y + size.y / 2);
+	m_cornors.emplace_back(center.x - size.x / 2,center.y + size.y / 2);
+	m_cornors.emplace_back(center.x + size.x / 2,center.y - size.y / 2);
 }
 
 void states::HouseSeek::Update(Blackboard* pBlackboard, float deltaTime)
