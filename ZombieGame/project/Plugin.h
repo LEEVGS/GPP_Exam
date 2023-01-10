@@ -1,6 +1,7 @@
 #pragma once
 #include "IExamPlugin.h"
 #include "Exam_HelperStructs.h"
+#include "Inventory.h"
 
 #include "StatesAndTransitions.h"
 #include <vector>
@@ -11,8 +12,8 @@ class IExamInterface;
 class Plugin :public IExamPlugin
 {
 public:
-	Plugin() {};
-	virtual ~Plugin() {};
+	Plugin() = default;
+	~Plugin() override = default;
 
 	void Initialize(IBaseInterface* pInterface, PluginInfo& info) override;
 	void DllInit() override;
@@ -32,8 +33,8 @@ private:
 	std::vector<EntityInfo> GetEntitiesInFOV() const;
 
 	Elite::Vector2 m_Target = {};
-	bool m_ShowDebug = true;
-	bool m_CanRun = false; //Demo purpose
+	bool m_ShowDebug = false;
+	bool m_CanRun = true; //Demo purpose
 	bool m_GrabItem = false; //Demo purpose
 	bool m_UseItem = false; //Demo purpose
 	bool m_RemoveItem = false; //Demo purpose
@@ -41,20 +42,28 @@ private:
 
 	UINT m_InventorySlot = 0;
 
-	int m_TilesSize{};
+	void EntityHandling();
+	void HouseHandling();
+	void GridHandle();
+
+	void CreateGrid();
 	int m_AmountCellsWidth{};
 	int m_AmountCellsHeight{};
 	const float m_CellSize = 5.f;
-	TileInfo* m_pArrTiles{nullptr};
+	std::vector<TileInfo*> m_pTiles;
 
 	void CreateFSM();
 	Blackboard* CreateBlackboard();
 	Blackboard* m_pBlackboard {nullptr};
 	FiniteStateMachine* m_pDecisionMaking{ nullptr };
 
+	Inventory* m_pInventory{ nullptr };
+
 	AgentInfo m_AgentInfo;
 	std::vector<HouseInfo> m_VisitedHouses;
 	std::vector<HouseInfo> m_NewHouses;
+	std::vector<EntityInfo> m_Items;
+	std::vector<EntityInfo> m_Enemies;
 	std::vector<FSMCondition*> m_Conditions;
 	std::vector<FSMState*> m_States;
 };

@@ -5,6 +5,7 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="StatesAndTransitions.cpp" />
     <ClCompile Include="FSM.cpp" />
+    <ClCompile Include="Inventory.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
@@ -12,5 +13,6 @@
     <ClInclude Include="StatesAndTransitions.h" />
     <ClInclude Include="FSM.h" />
     <ClInclude Include="Blackboard.h" />
+    <ClInclude Include="Inventory.h" />
   </ItemGroup>
 </Project>

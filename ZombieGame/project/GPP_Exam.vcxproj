@@ -146,6 +146,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\inc\;</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -185,12 +186,14 @@
   <ItemGroup>
     <ClInclude Include="Blackboard.h" />
     <ClInclude Include="FSM.h" />
+    <ClInclude Include="Inventory.h" />
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="StatesAndTransitions.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FSM.cpp" />
+    <ClCompile Include="Inventory.cpp" />
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="StatesAndTransitions.cpp" />
     <ClCompile Include="stdafx.cpp">

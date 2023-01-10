@@ -94,35 +94,37 @@ enum class eEnemyType
 //**********
 struct StatisticsInfo
 {
-	int Score; //Current Score
-	float Difficulty; //Current difficulty (0 > 1 > ... / Easy > Normal > Hard)
-	float TimeSurvived; //Total time survived
-	float KillCountdown; //Make sure to make a kill before this timer runs out
+	int Score{}; //Current Score
+	float Difficulty{}; //Current difficulty (0 > 1 > ... / Easy > Normal > Hard)
+	float TimeSurvived{}; //Total time survived
+	float KillCountdown{}; //Make sure to make a kill before this timer runs out
 
-	int NumEnemiesKilled; //Amount of enemies killed
-	int NumEnemiesHit; //Amount of enemy hits
-	int NumItemsPickUp; //Amount of items picked up
-	int NumMissedShots; //Shots missed after firing
-	int NumChkpntsReached; //Amount of checkpoints reached
+	int NumEnemiesKilled{}; //Amount of enemies killed
+	int NumEnemiesHit{}; //Amount of enemy hits
+	int NumItemsPickUp{}; //Amount of items picked up
+	int NumMissedShots{}; //Shots missed after firing
+	int NumChkpntsReached{}; //Amount of checkpoints reached
 
 };
 
 struct HouseInfo
 {
-	Elite::Vector2 Center;
-	Elite::Vector2 Size;
+	Elite::Vector2 Center{};
+	Elite::Vector2 Size{};
 };
 
 struct TileInfo
 {
 	enum Type
 	{
-		Void = 0,
+		Unknown = 0,
+		Void,
 		House,
-		Item
+		Danger
 	};
 	int id{-1};
 	Elite::Vector2 pos{0,0};
+	Elite::Vector2 middlePos{0,0};
 	static int GetTileId(Elite::Vector2 pos)
 	{
 		int x = (int)((pos.x + correction) / cellSize);
@@ -133,31 +135,31 @@ struct TileInfo
 	static inline float correction{};
 	static inline float cellSize{};
 	static inline int amountCellsWidth{};
-	Type type{ Type::Void };
+	Type type{ Type::Unknown };
 };
 
 struct EnemyInfo
 {
-	eEnemyType Type;
-	Elite::Vector2 Location;
-	Elite::Vector2 LinearVelocity;
+	eEnemyType Type{};
+	Elite::Vector2 Location{};
+	Elite::Vector2 LinearVelocity{};
 
 	int EnemyHash = 0;
-	float Size;
-	float Health;
+	float Size{};
+	float Health{};
 };
 
 struct ItemInfo
 {
-	eItemType Type;
-	Elite::Vector2 Location;
+	eItemType Type{};
+	Elite::Vector2 Location{};
 
 	int ItemHash = 0;
 };
 
 struct PurgeZoneInfo
 {
-	Elite::Vector2 Center;
+	Elite::Vector2 Center{};
 	float Radius = 0.0f;
 
 	int ZoneHash = 0;
@@ -165,40 +167,40 @@ struct PurgeZoneInfo
 
 struct EntityInfo
 {
-	eEntityType Type;
-	Elite::Vector2 Location;
+	eEntityType Type{};
+	Elite::Vector2 Location{};
 
 	int EntityHash = 0;
 };
 
 struct WorldInfo
 {
-	Elite::Vector2 Center;
-	Elite::Vector2 Dimensions;
+	Elite::Vector2 Center{};
+	Elite::Vector2 Dimensions{};
 };
 
 struct AgentInfo
 {
-	float Stamina;
-	float Health;
-	float Energy;
-	bool RunMode;
-	bool IsInHouse;
-	bool Bitten;		// agent was bitten by a zombie this frame (for internal use)
-	bool WasBitten;		// agent was bitten by a zombie recently (0.5 seconds)
-	bool Death;
+	float Stamina{};
+	float Health{};
+	float Energy{};
+	bool RunMode{};
+	bool IsInHouse{};
+	bool Bitten{};		// agent was bitten by a zombie this frame (for internal use)
+	bool WasBitten{};		// agent was bitten by a zombie recently (0.5 seconds)
+	bool Death{};
 
-	float FOV_Angle;
-	float FOV_Range;
+	float FOV_Angle{};
+	float FOV_Range{};
 
-	Elite::Vector2 LinearVelocity;
-	float AngularVelocity;
-	float CurrentLinearSpeed;
-	Elite::Vector2 Position;
-	float Orientation;
-	float MaxLinearSpeed;
-	float MaxAngularSpeed;
-	float GrabRange;
-	float AgentSize;
+	Elite::Vector2 LinearVelocity{};
+	float AngularVelocity{};
+	float CurrentLinearSpeed{};
+	Elite::Vector2 Position{};
+	float Orientation{};
+	float MaxLinearSpeed{};
+	float MaxAngularSpeed{};
+	float GrabRange{};
+	float AgentSize{};
 };
 #pragma endregion
