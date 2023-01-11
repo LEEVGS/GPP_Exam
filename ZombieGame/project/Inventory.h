@@ -15,12 +15,13 @@ public:
 	int GetAmmoShotgun(int& slot);
 	int GetAmmoPistol(int& slot);
 	bool Shoot();
-	
+	bool HasFreeSlot();
+	bool Heal();
+	bool Eat();
 private:
 	IExamInterface* m_pInterface;
 
-	bool Heal();
-	bool Eat();
+	
 	void DropNoAmmo();
 
 	static inline constexpr int m_AmountOfSlots = 5;

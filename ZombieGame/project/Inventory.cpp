@@ -14,7 +14,7 @@ void Inventory::Update(const AgentInfo* pAgentInfo)
 	{
 		m_HasFood = Eat();
 	}
-	if (pAgentInfo->Health <= 5.f && m_HasHeal)
+	if (pAgentInfo->Health <= 5.f)
 	{
 		m_HasHeal = Heal();
 	}
@@ -101,6 +101,18 @@ bool Inventory::Shoot()
 		{
 			m_pInterface->Inventory_UseItem(i);
 			DropNoAmmo();
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Inventory::HasFreeSlot()
+{
+	for (const auto& m_Slot : m_Slots)
+	{
+		if (m_Slot.ItemHash == 0)
+		{
 			return true;
 		}
 	}

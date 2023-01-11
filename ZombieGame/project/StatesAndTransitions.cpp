@@ -124,7 +124,6 @@ void states::ItemSeek::Update(Blackboard* pBlackboard, float deltaTime)
 			return;
 		}
 
-
 		switch (itemInfo.Type)
 		{
 		case eItemType::GARBAGE:
@@ -144,6 +143,10 @@ void states::ItemSeek::Update(Blackboard* pBlackboard, float deltaTime)
 				}
 				PickupItem(pInterface, pInventory, items);
 			}
+			else
+			{
+				DestroyItem(pInterface, items);
+			}
 			}
 			break;
 		case eItemType::SHOTGUN:
@@ -158,14 +161,33 @@ void states::ItemSeek::Update(Blackboard* pBlackboard, float deltaTime)
 				}
 				PickupItem(pInterface, pInventory, items);
 			}
+			else
+			{
+				DestroyItem(pInterface, items);
+			}
 		}
 		break;
 		case eItemType::FOOD:
 		case eItemType::MEDKIT:
+		{
+			if ((**pInventory).HasFreeSlot())
 			{
-			PickupItem(pInterface, pInventory, items);
+				PickupItem(pInterface, pInventory, items);
 			}
-			break;
+			else
+			{
+				if (itemInfo.Type == eItemType::FOOD)
+				{
+					(**pInventory).Eat();
+				}
+				else if (itemInfo.Type == eItemType::MEDKIT)
+				{
+					(**pInventory).Heal();
+				}
+				PickupItem(pInterface, pInventory, items);
+			}
+		}
+		break;
 		}
 	}
 

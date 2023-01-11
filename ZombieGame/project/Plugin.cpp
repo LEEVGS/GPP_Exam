@@ -15,7 +15,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 
 	//Bit information about the plugin
 	//Please fill this in!!
-	info.BotName = "MinionExam";
+	info.BotName = "NatteKanker";
 	info.Student_FirstName = "Lee";
 	info.Student_LastName = "Vangraefschepe";
 	info.Student_Class = "2DAE15N";
@@ -161,7 +161,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//Update target
 	m_pDecisionMaking->Update(dt);
-
+	
 	//Handle enemy target
 	if (m_Enemies.empty())
 	{
@@ -170,8 +170,31 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	}
 	else
 	{
-		m_Target = m_Enemies.at(0).Location;
-		steering.AutoOrient = true;
+		m_Target = m_Enemies.at(m_Enemies.size()-1).Location;
+		Elite::Vector2 directionToTarget = m_Target - m_AgentInfo.Position;
+
+		directionToTarget.Normalize();
+
+		steering.AngularVelocity = Elite::VectorToOrientation(directionToTarget) - m_AgentInfo.Orientation;
+
+		if (steering.AngularVelocity < 0.1f)
+		{
+			m_pInventory->Shoot();
+			m_Enemies.pop_back();
+		}
+
+		std::cout << "Rotation: " << steering.AngularVelocity << "\n";
+
+		if (steering.AngularVelocity > m_AgentInfo.MaxAngularSpeed)
+		{
+			steering.AngularVelocity = m_AgentInfo.MaxAngularSpeed;
+		}
+		else if (steering.AngularVelocity < -m_AgentInfo.MaxAngularSpeed)
+		{
+			steering.AngularVelocity = -m_AgentInfo.MaxAngularSpeed;
+		}
+		steering.AutoOrient = false;
+		m_Target = m_AgentInfo.Position;
 	}
 
 	const auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
@@ -203,10 +226,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
 
-	//SteeringPlugin_Output is works the exact same way a SteeringBehaviour output
-
-//@End (Demo Purposes)
-	m_GrabItem = false; //Reset State
+	m_GrabItem = false;
 	m_UseItem = false;
 	m_RemoveItem = false;
 
