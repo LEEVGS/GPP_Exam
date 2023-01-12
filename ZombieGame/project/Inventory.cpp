@@ -14,7 +14,7 @@ void Inventory::Update(const AgentInfo* pAgentInfo)
 	{
 		m_HasFood = Eat();
 	}
-	if (pAgentInfo->Health <= 5.f)
+	if (pAgentInfo->Health <= 8.f)
 	{
 		m_HasHeal = Heal();
 	}
@@ -56,6 +56,10 @@ int Inventory::GetAmmoPistol(int& slot)
 void Inventory::PullInventory()
 {
 	m_HasFood = m_HasHeal = m_HasWeapon = true;
+	for (auto& m_Slot : m_Slots)
+	{
+		m_Slot = ItemInfo{};
+	}
 	for (int i = 0; i < m_AmountOfSlots; ++i)
 	{
 		m_pInterface->Inventory_GetItem(i, m_Slots[i]);
@@ -97,7 +101,13 @@ bool Inventory::Shoot()
 {
 	for (int i = 0; i < m_AmountOfSlots; ++i)
 	{
-		if (m_Slots[i].Type == eItemType::PISTOL || m_Slots[i].Type == eItemType::SHOTGUN)
+		if ((m_Slots[i].Type == eItemType::PISTOL && m_Slots[i].ItemHash != 0))
+		{
+			m_pInterface->Inventory_UseItem(i);
+			DropNoAmmo();
+			return true;
+		}
+		else if (m_Slots[i].Type == eItemType::SHOTGUN)
 		{
 			m_pInterface->Inventory_UseItem(i);
 			DropNoAmmo();
@@ -117,6 +127,12 @@ bool Inventory::HasFreeSlot()
 		}
 	}
 	return false;
+}
+
+bool Inventory::HasWeapon()
+{
+	int slot{};
+	return GetAmmoPistol(slot) + GetAmmoShotgun(slot) > 0;
 }
 
 bool Inventory::Heal()

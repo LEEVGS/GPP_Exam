@@ -43,6 +43,15 @@ namespace states
 		void DestroyItem(IExamInterface** pInterface, std::vector<EntityInfo>* items);
 	private:
 	};
+	class EscapePurge : public FSMState
+	{
+	public:
+		EscapePurge() : FSMState() {};
+		virtual void OnEnter(Blackboard* pBlackboard) override;
+		virtual void Update(Blackboard* pBlackboard, float deltaTime) override;
+	private:
+		Elite::Vector2 m_Target;
+	};
 }
 
 //Conditions
@@ -70,6 +79,18 @@ namespace conditions
 	{
 	public:
 		ItemsNearby() : FSMCondition() {};
+		virtual bool Evaluate(Blackboard* pBlackboard) const override;
+	};
+	class PurgeNearby : public FSMCondition
+	{
+	public:
+		PurgeNearby() : FSMCondition() {};
+		virtual bool Evaluate(Blackboard* pBlackboard) const override;
+	};
+	class NoPurgeNearby : public FSMCondition
+	{
+	public:
+		NoPurgeNearby() : FSMCondition() {};
 		virtual bool Evaluate(Blackboard* pBlackboard) const override;
 	};
 	class OutterRange : public FSMCondition

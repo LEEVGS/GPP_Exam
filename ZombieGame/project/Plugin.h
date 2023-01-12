@@ -45,6 +45,8 @@ private:
 	void EntityHandling();
 	void HouseHandling();
 	void GridHandle();
+	void UpdatePurge(float dt);
+	void HandleEnemies(SteeringPlugin_Output& steering);
 
 	void CreateGrid();
 	int m_AmountCellsWidth{};
@@ -64,6 +66,7 @@ private:
 	std::vector<HouseInfo> m_NewHouses;
 	std::vector<EntityInfo> m_Items;
 	std::vector<EntityInfo> m_Enemies;
+	std::vector<PurgeZoneInfo> m_Purges;
 	std::vector<FSMCondition*> m_Conditions;
 	std::vector<FSMState*> m_States;
 };

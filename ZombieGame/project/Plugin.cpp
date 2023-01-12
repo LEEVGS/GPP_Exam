@@ -71,6 +71,8 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 	params.SpawnPurgeZonesOnMiddleClick = true;
 	params.PrintDebugMessages = true;
 	params.ShowDebugItemNames = true;
+	params.SpawnZombieOnRightClick = true;
+	params.PrintDebugMessages = false;
 	params.Seed = 36;
 	//params.Seed = 0;
 }
@@ -147,6 +149,8 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	//Update agent info
 	m_AgentInfo = m_pInterface->Agent_GetInfo();
 
+	UpdatePurge(dt);
+
 	//Item handling
 	EntityHandling();
 
@@ -156,46 +160,14 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	//House handling
 	HouseHandling();
 
-	//Handle inventory
-	m_pInventory->Update(&m_AgentInfo);
-
 	//Update target
 	m_pDecisionMaking->Update(dt);
+
+	//Handle inventory
+	m_pInventory->Update(&m_AgentInfo);
 	
 	//Handle enemy target
-	if (m_Enemies.empty())
-	{
-		steering.AngularVelocity = m_AgentInfo.MaxAngularSpeed;
-		steering.AutoOrient = false;
-	}
-	else
-	{
-		m_Target = m_Enemies.at(m_Enemies.size()-1).Location;
-		Elite::Vector2 directionToTarget = m_Target - m_AgentInfo.Position;
-
-		directionToTarget.Normalize();
-
-		steering.AngularVelocity = Elite::VectorToOrientation(directionToTarget) - m_AgentInfo.Orientation;
-
-		if (steering.AngularVelocity < 0.1f)
-		{
-			m_pInventory->Shoot();
-			m_Enemies.pop_back();
-		}
-
-		std::cout << "Rotation: " << steering.AngularVelocity << "\n";
-
-		if (steering.AngularVelocity > m_AgentInfo.MaxAngularSpeed)
-		{
-			steering.AngularVelocity = m_AgentInfo.MaxAngularSpeed;
-		}
-		else if (steering.AngularVelocity < -m_AgentInfo.MaxAngularSpeed)
-		{
-			steering.AngularVelocity = -m_AgentInfo.MaxAngularSpeed;
-		}
-		steering.AutoOrient = false;
-		m_Target = m_AgentInfo.Position;
-	}
+	HandleEnemies(steering);
 
 	const auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
 
@@ -211,6 +183,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	{
 		std::cout << "Items: " << m_Items.size() << "\n";
 		std::cout << "Enemies: " << m_Enemies.size() << "\n";
+		std::cout << "Zones: " << m_Purges.size() << "\n";
 		std::cout << "Houses: " << m_NewHouses.size() << " Visited houses: " << m_VisitedHouses.size() << "\n";
 		std::cout << "Target: " << m_Target.x << "," << m_Target.y << "\n";
 	}
@@ -328,6 +301,10 @@ void Plugin::EntityHandling()
 			if (alreadyAdded == false)
 			{
 				m_Items.push_back(value);
+				for (auto & house : m_VisitedHouses)
+				{
+					house.ItemsRemaining--;
+				}
 			}
 		}
 		else if (value.Type == eEntityType::ENEMY)
@@ -354,23 +331,61 @@ void Plugin::EntityHandling()
 		}
 		else if (value.Type == eEntityType::PURGEZONE)
 		{
-			PurgeZoneInfo zoneInfo;
+			bool alreadyAdded{};
+			PurgeZoneInfo zoneInfo{};
 			m_pInterface->PurgeZone_GetInfo(value, zoneInfo);
-			//std::cout << "Purge Zone in FOV:" << e.Location.x << ", "<< e.Location.y << "---Radius: "<< zoneInfo.Radius << std::endl;
+			for (const auto & zone : vEntitiesInFOV)
+			{
+				for (const auto& knownZone : m_Purges)
+				{
+					if (knownZone.Center == zone.Location)
+					{
+						alreadyAdded = true;
+						break;
+					}
+				}
+				if (alreadyAdded == false)
+				{
+					m_Purges.push_back(zoneInfo);
+				}
+			}
 		}
 	}
 }
-
+void Plugin::UpdatePurge(float dt)
+{
+	for (int i = 0; i < static_cast<int>(m_Purges.size()); ++i)
+	{
+		m_Purges[i].TimeRemaining -= dt;
+		if (m_Purges[i].TimeRemaining <= 0.f)
+		{
+			m_Purges.clear();
+			break;
+		}
+	}
+	m_CanRun = !m_Purges.empty();
+}
 void Plugin::HouseHandling()
 {
+	for (int i = 0; i < static_cast<int>(m_VisitedHouses.size()); ++i)
+	{
+		if (m_VisitedHouses[i].ItemsRemaining <= 0)
+		{
+			m_VisitedHouses[i].ItemsRemaining = 10;
+			m_NewHouses.push_back(m_VisitedHouses[i]);
+			m_VisitedHouses.erase(m_VisitedHouses.begin() + i);
+		}
+	}
+
+
 	const auto vHousesInFOV = GetHousesInFOV();
 	for (const auto& housesInFov : vHousesInFOV)
 	{
 		bool alreadyVisited{ false };
 		bool alreadyAdded{ false };
-		for (const auto& visitedHouse : m_VisitedHouses)
+		for (const auto& [Center, Size, ItemsRemaining] : m_VisitedHouses)
 		{
-			if (visitedHouse.Center == housesInFov.Center)
+			if (Center == housesInFov.Center)
 			{
 				alreadyVisited = true;
 				break;
@@ -430,6 +445,42 @@ void Plugin::GridHandle()
 	}
 }
 
+void Plugin::HandleEnemies(SteeringPlugin_Output& steering)
+{
+	if (!m_Enemies.empty() && m_pInventory->HasWeapon() && m_Purges.empty())
+	{
+		m_Target = m_Enemies.at(m_Enemies.size() - 1).Location;
+		Elite::Vector2 directionToTarget = m_Target - m_AgentInfo.Position;
+
+		directionToTarget.Normalize();
+
+		steering.AngularVelocity = Elite::VectorToOrientation(directionToTarget) - m_AgentInfo.Orientation;
+
+		if (abs(steering.AngularVelocity) < 0.1f)
+		{
+			std::cout << steering.AngularVelocity << "\n";
+			m_pInventory->Shoot();
+			m_Enemies.pop_back();
+		}
+
+		if (steering.AngularVelocity > m_AgentInfo.MaxAngularSpeed)
+		{
+			steering.AngularVelocity = m_AgentInfo.MaxAngularSpeed;
+		}
+		else if (steering.AngularVelocity < -m_AgentInfo.MaxAngularSpeed)
+		{
+			steering.AngularVelocity = -m_AgentInfo.MaxAngularSpeed;
+		}
+		steering.AutoOrient = false;
+		m_Target = m_AgentInfo.Position;
+	}
+	else
+	{
+		steering.AngularVelocity = m_AgentInfo.MaxAngularSpeed;
+		steering.AutoOrient = false;
+	}
+}
+
 void Plugin::CreateGrid()
 {
 	m_WorldInfo = m_pInterface->World_GetInfo();
@@ -473,6 +524,8 @@ void Plugin::CreateFSM()
 	m_States.push_back(pHouseSeek);
 	auto* pItemSeek = new states::ItemSeek{};
 	m_States.push_back(pItemSeek);
+	auto* pEscapePurge = new states::EscapePurge{};
+	m_States.push_back(pEscapePurge);
 
 	//Create conditions
 	auto* pNoHouseNearby = new conditions::NoHouseNearby{};
@@ -483,8 +536,12 @@ void Plugin::CreateFSM()
 	m_Conditions.push_back(pNoItemsNearby);
 	auto* pItemsNearby = new conditions::ItemsNearby{};
 	m_Conditions.push_back(pItemsNearby);
-	auto* pOutterRange = new conditions::OutterRange{};
-	m_Conditions.push_back(pOutterRange);
+	auto* pOuterRange = new conditions::OutterRange{};
+	m_Conditions.push_back(pOuterRange);
+	auto* pPurgeNearby = new conditions::PurgeNearby{};
+	m_Conditions.push_back(pPurgeNearby);
+	auto* pNoPurgeNearby = new conditions::NoPurgeNearby{};
+	m_Conditions.push_back(pNoPurgeNearby);
 
 	m_pBlackboard = CreateBlackboard();
 
@@ -496,9 +553,15 @@ void Plugin::CreateFSM()
 	m_pDecisionMaking->AddTransition(pHouseSeek, pWanderState, pNoHouseNearby);
 	m_pDecisionMaking->AddTransition(pItemSeek, pHouseSeek, pNoItemsNearby);
 
-	m_pDecisionMaking->AddTransition(pWanderState, pExploreState, pOutterRange);
+	m_pDecisionMaking->AddTransition(pWanderState, pExploreState, pOuterRange);
 	m_pDecisionMaking->AddTransition(pExploreState, pHouseSeek, pHouseNearby);
 	m_pDecisionMaking->AddTransition(pExploreState, pItemSeek, pItemsNearby);
+
+	m_pDecisionMaking->AddTransition(pWanderState, pEscapePurge, pPurgeNearby);
+	m_pDecisionMaking->AddTransition(pExploreState, pEscapePurge, pPurgeNearby);
+	m_pDecisionMaking->AddTransition(pHouseSeek, pEscapePurge, pPurgeNearby);
+	m_pDecisionMaking->AddTransition(pItemSeek, pEscapePurge, pPurgeNearby);
+	m_pDecisionMaking->AddTransition(pEscapePurge, pExploreState, pNoPurgeNearby);
 }
 
 Blackboard* Plugin::CreateBlackboard()
@@ -513,6 +576,7 @@ Blackboard* Plugin::CreateBlackboard()
 	pBlackboard->AddData("WorldInfo", &m_WorldInfo);
 	pBlackboard->AddData("Items", &m_Items);
 	pBlackboard->AddData("Enemies", &m_Enemies);
+	pBlackboard->AddData("Purges", &m_Purges);
 	pBlackboard->AddData("Inventory", &m_pInventory);
 	return pBlackboard;
 }

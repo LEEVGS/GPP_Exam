@@ -184,7 +184,31 @@ void states::ItemSeek::Update(Blackboard* pBlackboard, float deltaTime)
 				{
 					(**pInventory).Heal();
 				}
-				PickupItem(pInterface, pInventory, items);
+
+				if ((**pInventory).HasFreeSlot())
+				{
+					PickupItem(pInterface, pInventory, items);
+				}
+				else
+				{
+					if (itemInfo.Type == eItemType::FOOD)
+					{
+						(**pInventory).Heal();
+					}
+					else if (itemInfo.Type == eItemType::MEDKIT)
+					{
+						(**pInventory).Eat();
+					}
+				}
+
+				if ((**pInventory).HasFreeSlot())
+				{
+					PickupItem(pInterface, pInventory, items);
+				}
+				else
+				{
+					DestroyItem(pInterface, items);
+				}
 			}
 		}
 		break;
@@ -229,6 +253,39 @@ void states::ItemSeek::DestroyItem(IExamInterface** pInterface, std::vector<Enti
 void states::WanderState::OnEnter(Blackboard* pBlackboard)
 {
 	std::cout << "Wander mode\n";
+}
+void states::EscapePurge::OnEnter(Blackboard* pBlackboard)
+{
+	std::cout << "Escape purge mode\n";
+	std::vector<PurgeZoneInfo>* purges;
+	AgentInfo* pAgent;
+
+	if (pBlackboard->GetData("Agent", pAgent) == false || pAgent == nullptr)
+	{
+		return;
+	}
+	if (pBlackboard->GetData("Purges", purges) == false || purges == nullptr)
+	{
+		return;
+	}
+
+	PurgeZoneInfo c = purges->at(0);
+	c.Radius *= 1.5f;
+	Elite::Vector2 direction = pAgent->Position- c.Center;
+	direction *= c.Radius - direction.Magnitude();
+
+	m_Target = pAgent->Position + direction;
+}
+void states::EscapePurge::Update(Blackboard* pBlackboard, float deltaTime)
+{
+	Elite::Vector2* pTarget;
+	if (pBlackboard->GetData("Target", pTarget) == false || pTarget == nullptr)
+	{
+		return;
+	}
+
+	pTarget->x = m_Target.x;
+	pTarget->y = m_Target.y;
 }
 void states::WanderState::Update(Blackboard* pBlackboard, float deltaTime)
 {
@@ -410,4 +467,46 @@ bool conditions::OutterRange::Evaluate(Blackboard* pBlackboard) const
 		return true;
 	}
 	return false;
+}
+
+bool conditions::PurgeNearby::Evaluate(Blackboard* pBlackboard) const
+{
+	std::vector<PurgeZoneInfo>* purges;
+	AgentInfo* pAgent;
+
+	if (pBlackboard->GetData("Agent", pAgent) == false || pAgent == nullptr)
+	{
+		return false;
+	}
+	if (pBlackboard->GetData("Purges", purges) == false || purges == nullptr)
+	{
+		return false;
+	}
+
+	if (!purges->empty())
+	{
+		PurgeZoneInfo c = purges->at(0);
+		c.Radius *= 1.5f;
+		const float squaredDist{ (pAgent->Position.x - c.Center.x) * (pAgent->Position.x - c.Center.x) + (pAgent->Position.y - c.Center.y) * (pAgent->Position.y - c.Center.y) };
+		const float squaredRadius{ c.Radius * c.Radius };
+
+		//If player is in purge
+		if (squaredRadius >= squaredDist)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool conditions::NoPurgeNearby::Evaluate(Blackboard* pBlackboard) const
+{
+	std::vector<PurgeZoneInfo>* purges;
+	if (pBlackboard->GetData("Purges", purges) == false || purges == nullptr)
+	{
+		return false;
+	}
+
+	return purges->empty();
 }

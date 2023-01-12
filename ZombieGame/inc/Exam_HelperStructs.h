@@ -111,6 +111,7 @@ struct HouseInfo
 {
 	Elite::Vector2 Center{};
 	Elite::Vector2 Size{};
+	int ItemsRemaining{ 10 };
 };
 
 struct TileInfo
@@ -161,8 +162,8 @@ struct PurgeZoneInfo
 {
 	Elite::Vector2 Center{};
 	float Radius = 0.0f;
-
 	int ZoneHash = 0;
+	float TimeRemaining = 7.5f;
 };
 
 struct EntityInfo

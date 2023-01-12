@@ -16,6 +16,7 @@ public:
 	int GetAmmoPistol(int& slot);
 	bool Shoot();
 	bool HasFreeSlot();
+	bool HasWeapon();
 	bool Heal();
 	bool Eat();
 private:
